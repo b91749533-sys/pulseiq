@@ -1,0 +1,225 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PlanType {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum PlatformType {
+  YOUTUBE
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  TWITTER
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id            String        @id @default(uuid())
+  clerkId       String        @unique
+  email         String        @unique
+  name          String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  subscription  Subscription?
+  settings      Settings?
+  accounts      SocialAccount[]
+  competitors   Competitor[]
+  notifications Notification[]
+  reports       Report[]
+  conversations AIConversation[]
+  activityLogs  ActivityLog[]
+}
+
+model Subscription {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        PlanType  @default(FREE)
+  status      String    @default("active") // active, trialing, past_due, canceled
+  stripeId    String?   @unique
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+}
+
+model Settings {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme               String   @default("dark") // dark, light, system
+  emailNotifications  Boolean  @default(true)
+  weeklyDigest        Boolean  @default(true)
+  securityAlerts      Boolean  @default(true)
+}
+
+model SocialAccount {
+  id           String          @id @default(uuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform     PlatformType
+  platformId   String          // ID on YouTube, Instagram, etc.
+  handle       String          // e.g., @username
+  displayName  String?
+  avatarUrl    String?
+  accessToken  String          // Encrypted or simulated
+  refreshToken String?         // Encrypted or simulated
+  expiresAt    DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  posts        Post[]
+  metrics      AnalyticsMetric[]
+
+  @@unique([userId, platform, platformId])
+}
+
+model Post {
+  id              String          @id @default(uuid())
+  accountId       String
+  account         SocialAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  platform        PlatformType
+  title           String?
+  content         String          // Caption / description
+  mediaUrl        String?
+  status          PostStatus      @default(DRAFT)
+  scheduledFor    DateTime?
+  publishedAt     DateTime?
+  externalId      String?         // ID returned by the platform after publishing
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  metrics         PostMetric[]
+}
+
+model AnalyticsMetric {
+  id              String        @id @default(uuid())
+  accountId       String
+  account         SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  recordedAt      DateTime      @default(now())
+  followers       Int           @default(0)
+  following       Int           @default(0)
+  totalPosts      Int           @default(0)
+  reach           Int           @default(0)
+  impressions     Int           @default(0)
+  engagementRate  Float         @default(0.0)
+  views           Int           @default(0)
+  likes           Int           @default(0)
+  shares          Int           @default(0)
+  comments        Int           @default(0)
+
+  @@index([accountId, recordedAt])
+}
+
+model PostMetric {
+  id              String        @id @default(uuid())
+  postId          String
+  post            Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  recordedAt      DateTime      @default(now())
+  views           Int           @default(0)
+  likes           Int           @default(0)
+  shares          Int           @default(0)
+  comments        Int           @default(0)
+  impressions     Int           @default(0)
+  engagementRate  Float         @default(0.0)
+
+  @@index([postId, recordedAt])
+}
+
+model Competitor {
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform        PlatformType
+  handle          String
+  displayName     String?
+  avatarUrl       String?
+  followers       Int           @default(0)
+  totalPosts      Int           @default(0)
+  engagementRate  Float         @default(0.0)
+  weeklyGrowthRate Float         @default(0.0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  metrics         CompetitorMetric[]
+}
+
+model CompetitorMetric {
+  id              String        @id @default(uuid())
+  competitorId    String
+  competitor      Competitor    @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  recordedAt      DateTime      @default(now())
+  followers       Int           @default(0)
+  engagementRate  Float         @default(0.0)
+  growthRate      Float         @default(0.0)
+  postsCount      Int           @default(0)
+
+  @@index([competitorId, recordedAt])
+}
+
+model Notification {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  type        String    // info, warning, success, error
+  read        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+}
+
+model Report {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  rangeStart  DateTime
+  rangeEnd    DateTime
+  format      String    // PDF, EXCEL, CSV
+  fileUrl     String?   // Location in storage (S3/GCS or local mock storage)
+  createdAt   DateTime  @default(now())
+}
+
+model AIConversation {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String      @default("New Chat")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  messages    AIMessage[]
+}
+
+model AIMessage {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String         // user, assistant
+  content        String
+  createdAt      DateTime       @default(now())
+}
+
+model ActivityLog {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String    // e.g., "CONNECT_ACCOUNT", "SCHEDULE_POST"
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+}

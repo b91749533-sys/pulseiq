@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans bg-background-light dark:bg-background-dark text-zinc-900 dark:text-zinc-100 transition-colors duration-300 antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight font-bold text-zinc-950 dark:text-white;
+  }
+}
+
+/* Custom premium scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-300 dark:bg-zinc-800 rounded-full hover:bg-zinc-400 dark:hover:bg-zinc-700 transition-colors;
+}
+
+/* Glassmorphism panel styling */
+.glass-panel {
+  @apply bg-white/70 dark:bg-card-dark/60 backdrop-blur-xl border border-border-light dark:border-border-dark/60;
+}
+
+.premium-card {
+  @apply bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl shadow-premium-light dark:shadow-premium-dark hover:border-zinc-300 dark:hover:border-zinc-700/60 transition-all duration-300;
+}
+
+.gradient-text-electric {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-electric via-brand-violet to-purple-400;
+}
+
+.number-font {
+  @apply font-mono tracking-tight;
+}
